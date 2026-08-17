@@ -38,7 +38,7 @@ bash provision_pod.sh --start
 
 This will:
 
-- Configure `TERM=xterm-256color` and `HF_HOME=/workspace/hf_cache` persistently in `~/.bashrc` — fixes tmux refusing to start under modern terminals, and keeps the HuggingFace cache (weights) on the persistent volume.
+- Configure `TERM=xterm-256color`, `HF_HOME=/workspace/hf_cache` and `HF_HUB_ENABLE_HF_TRANSFER=0` persistently in `~/.bashrc` — fixes tmux refusing to start under modern terminals, keeps the HuggingFace cache (weights) on the persistent volume, and avoids `tribev2`'s internal `whisperx` step crashing with `hf_transfer package is not available` (some RunPod templates ship that variable set to `1`).
 - Clone (or `git pull`) this repo into `/workspace/brainscore`.
 - Clone `facebookresearch/tribev2` into `/workspace/tribev2` and install it with `pip install -e`.
 - Install `backend/requirements.txt` and `nltk`.

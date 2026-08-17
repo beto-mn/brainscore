@@ -38,7 +38,7 @@ ok()   { echo -e "\033[1;32m ✓ $*\033[0m"; }
 fail() { echo -e "\033[1;31m ✗ $*\033[0m"; exit 1; }
 
 # ----------------------------------------------------------------------------
-log "1/8 Variables de entorno persistentes (TERM + HF_HOME)"
+log "1/8 Variables de entorno persistentes (TERM + HF_HOME + HF_HUB_ENABLE_HF_TRANSFER)"
 # ----------------------------------------------------------------------------
 # TERM: terminales modernas (Ghostty, kitty...) anuncian un TERM que el pod no
 # conoce y tmux se niega a arrancar ("missing or unsuitable terminal").
@@ -51,7 +51,17 @@ grep -q "HF_HOME=" ~/.bashrc 2>/dev/null || \
   echo "export HF_HOME=${HF_CACHE}" >> ~/.bashrc
 export HF_HOME="${HF_CACHE}"
 mkdir -p "${HF_CACHE}"
-ok "TERM y HF_HOME configurados"
+
+# HF_HUB_ENABLE_HF_TRANSFER: algunos templates de RunPod la traen en 1 para
+# acelerar descargas de HuggingFace, pero tribev2 invoca whisperx en un
+# entorno aislado (uv) que no trae el paquete hf_transfer instalado. Con la
+# variable en 1 esa descarga revienta con "hf_transfer package is not
+# available" antes de transcribir el audio. La forzamos a 0 (descarga normal,
+# más lenta pero sin esa dependencia extra).
+grep -q "HF_HUB_ENABLE_HF_TRANSFER=0" ~/.bashrc 2>/dev/null || \
+  echo 'export HF_HUB_ENABLE_HF_TRANSFER=0' >> ~/.bashrc
+export HF_HUB_ENABLE_HF_TRANSFER=0
+ok "TERM, HF_HOME y HF_HUB_ENABLE_HF_TRANSFER configurados"
 
 # ----------------------------------------------------------------------------
 log "2/8 Repo de la app en el volumen persistente"
