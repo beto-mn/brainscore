@@ -18,45 +18,49 @@ Monorepo:
 
 ## 1. 🖥️ Pod setup (backend)
 
-### 1.1 Clone the repo on the pod
+### 1.1 Run the provisioning script
 
-Connect to the pod via SSH (see section 2 for how to get host/port) and clone this repo inside the persistent volume:
+`provision_pod.sh` (at the repo root) is idempotent and self-contained: it clones this repo *and* `facebookresearch/tribev2` into `/workspace`, so you don't need to `git clone` manually first. Run it from a fresh SSH session on the pod (see section 2 for how to get host/port):
 
 ```bash
-cd /workspace
-git clone <this-repo-url> brainscore
-cd brainscore
+curl -o provision_pod.sh https://raw.githubusercontent.com/beto-mn/brainscore/master/provision_pod.sh
+bash provision_pod.sh --start
 ```
 
-### 1.2 Run the setup script
+`--start` also brings up the API at the end (see 1.3). Omit it if you just want to provision without starting the server yet.
 
-`backend/setup_pod.sh` is idempotent: it prepares everything from scratch and is safe to re-run if something fails halfway.
+If the repo is already on the volume (e.g. re-provisioning after a Stop/Start), just run it directly:
 
 ```bash
-bash backend/setup_pod.sh
+cd /workspace/brainscore
+bash provision_pod.sh --start
 ```
 
 This will:
 
-- Export `HF_HOME=/workspace/hf_cache` (and add it to `~/.bashrc` so it persists across shell sessions).
+- Configure `TERM=xterm-256color` and `HF_HOME=/workspace/hf_cache` persistently in `~/.bashrc` — fixes tmux refusing to start under modern terminals, and keeps the HuggingFace cache (weights) on the persistent volume.
+- Clone (or `git pull`) this repo into `/workspace/brainscore`.
 - Clone `facebookresearch/tribev2` into `/workspace/tribev2` and install it with `pip install -e`.
-- Install `backend/requirements.txt`.
+- Install `backend/requirements.txt` and `nltk`.
+- Pin `numpy`/`torchvision`/`torchaudio` to versions compatible with the pod's preinstalled torch 2.8, avoiding mismatches like `operator torchvision::nms does not exist` or `undefined symbol: aoti_torch_abi_version`.
 - Download the `nltk punkt_tab` tokenizer.
-- Print the installed `torch`/`torchaudio` versions to verify compatibility with the pod image.
+- Authenticate with HuggingFace (see 1.2).
+- Run a final verification: installed versions, `torchvision::nms`, `punkt_tab`, CUDA availability and GPU name.
 
-> ⚠️ **Note:** `torch` is not in `requirements.txt` on purpose — it's already preinstalled in the pod image (RunPod PyTorch 2.8.0). Reinstalling it from pip could break the image's CUDA build.
+> ⚠️ **Note:** `torch` itself is never touched by this script — it's already preinstalled in the pod image (RunPod PyTorch 2.8.0) and reinstalling it could break the image's CUDA build. Only `torchvision`/`torchaudio`/`numpy` are pinned to match it.
 
-### 1.3 Log in to HuggingFace (manual, one time)
+### 1.2 HuggingFace authentication
 
-TRIBE v2 uses `meta-llama/Llama-3.2-3B`, which is a **gated** model on HuggingFace. The account already has access granted, but the pod still needs to authenticate:
+TRIBE v2 uses `meta-llama/Llama-3.2-3B`, which is a **gated** model on HuggingFace. The account already has access granted, but the pod still needs to authenticate — the script handles this automatically:
 
-```bash
-huggingface-cli login
-```
+- **Non-interactive:** set `HF_TOKEN` before running the script: `HF_TOKEN=hf_xxx bash provision_pod.sh`.
+- **Interactive:** if no `HF_TOKEN` is set and there's no cached session yet, the script prompts with `hf auth login` (the current CLI command — `huggingface-cli login` is deprecated).
 
-Paste your token when prompted. This only needs to happen once per persistent volume (the token is cached under `~/.cache/huggingface`, which lives under `/workspace` if your `HOME` points there — check that the cache isn't lost on pod restarts).
+The token is cached under `HF_HOME` (on the persistent volume), so this only needs to happen once per volume — it survives Stops, but not Terminates.
 
-### 1.4 Start the API
+### 1.3 Start the API
+
+If you didn't pass `--start` above:
 
 ```bash
 bash backend/start.sh
