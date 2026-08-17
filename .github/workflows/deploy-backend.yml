@@ -1,0 +1,38 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # appleboy/ssh-action (like native ssh with StrictHostKeyChecking=no)
+      # does not verify the pod's host key. This trade-off is accepted on
+      # purpose: RunPod pods change IP/host key every time they're recreated,
+      # so pinning known_hosts would break the deploy on every recreation.
+      # We're still protected by the private key (RUNPOD_SSH_KEY) as the sole
+      # authentication secret; what we lose is protection against a
+      # network-level MITM.
+      - name: Deploy to RunPod pod via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.RUNPOD_SSH_HOST }}
+          port: ${{ secrets.RUNPOD_SSH_PORT }}
+          username: root
+          key: ${{ secrets.RUNPOD_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /workspace/brainscore
+            BEFORE=$(git rev-parse HEAD)
+            git pull
+            AFTER=$(git rev-parse HEAD)
+            if git diff --name-only "$BEFORE" "$AFTER" | grep -q '^backend/requirements.txt$'; then
+              echo "requirements.txt changed, reinstalling..."
+              pip install -r backend/requirements.txt
+            fi
+            bash backend/start.sh
