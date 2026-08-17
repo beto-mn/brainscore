@@ -108,7 +108,21 @@ export default function Home() {
 
       <VideoDropzone onFileSelected={handleFileSelected} disabled={isBusy} />
 
-      {previewUrl && <video src={previewUrl} controls className="w-full rounded-xl border border-slate-800" />}
+      {previewUrl && file && (
+        <div className="flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-900/40 p-3">
+          <video
+            src={previewUrl}
+            muted
+            playsInline
+            preload="metadata"
+            className="h-20 w-20 flex-shrink-0 rounded-lg border border-slate-800 object-cover"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-slate-200">{file.name}</p>
+            <p className="text-xs text-slate-500">{(file.size / (1024 * 1024)).toFixed(1)} MB</p>
+          </div>
+        </div>
+      )}
 
       {file && state !== "done" && (
         <button
