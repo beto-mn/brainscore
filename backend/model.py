@@ -52,3 +52,20 @@ def run_inference(video_path: str):
     df = _model.get_events_dataframe(video_path=video_path)
     preds, _segments = _model.predict(events=df)
     return preds
+
+
+def release_gpu_memory():
+    """Free cached (but unused) CUDA memory after a job.
+
+    Torch keeps freed tensors in its own allocator cache instead of
+    returning them to the driver, so back-to-back jobs on a memory-limited
+    pod can look like a leak over time even though nothing is still
+    referenced. No-op in MOCK_MODEL mode.
+    """
+    if _MOCK:
+        return
+
+    import torch
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()

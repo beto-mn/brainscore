@@ -12,6 +12,7 @@ the upload to disk, enqueues a job for the single background worker
 """
 import contextlib
 import os
+import shutil
 import tempfile
 from contextlib import asynccontextmanager
 
@@ -60,7 +61,12 @@ async def analyze(video: UploadFile = File(...)):
 
     upload_dir = os.environ.get("UPLOAD_DIR", tempfile.gettempdir())
     os.makedirs(upload_dir, exist_ok=True)
-    tmp_path = os.path.join(upload_dir, f"{uuid_hex()}{ext}")
+    # Each upload gets its own directory so the whole thing - the video plus
+    # any intermediate files tribev2/whisperx write alongside it - can be
+    # wiped in one shot once the job finishes (see jobs.py's cleanup). The
+    # pod's disk is limited, so nothing from an analysis should outlive it.
+    job_dir = tempfile.mkdtemp(dir=upload_dir)
+    tmp_path = os.path.join(job_dir, f"video{ext}")
 
     size = 0
     try:
@@ -72,10 +78,10 @@ async def analyze(video: UploadFile = File(...)):
                     raise HTTPException(status_code=413, detail=detail)
                 f.write(chunk)
     except HTTPException:
-        _safe_remove(tmp_path)
+        _safe_rmtree(job_dir)
         raise
     except Exception as exc:
-        _safe_remove(tmp_path)
+        _safe_rmtree(job_dir)
         raise HTTPException(status_code=500, detail="Could not save the video.") from exc
     finally:
         await video.close()
@@ -92,10 +98,6 @@ async def get_job(job_id: str):
     return {"status": job["status"], "result": job["result"], "error": job["error"]}
 
 
-def uuid_hex() -> str:
-    return os.urandom(8).hex()
-
-
-def _safe_remove(path: str):
+def _safe_rmtree(path: str):
     with contextlib.suppress(OSError):
-        os.remove(path)
+        shutil.rmtree(path)

@@ -9,6 +9,7 @@ are ephemeral and the process is a single instance.
 import contextlib
 import os
 import queue
+import shutil
 import threading
 import uuid
 from enum import StrEnum
@@ -60,9 +61,19 @@ def _worker_loop():
         except Exception as exc:
             _set_job(job_id, status=JobStatus.ERROR, error=str(exc))
         finally:
-            with contextlib.suppress(OSError):
-                os.remove(video_path)
+            _cleanup_job_dir(video_path)
+            model_module.release_gpu_memory()
             _queue.task_done()
+
+
+def _cleanup_job_dir(video_path: str):
+    """Removes the whole per-job upload directory - the video plus any
+    intermediate files tribev2/whisperx may have written next to it - not
+    just the video file itself. The pod's disk is limited, so nothing from
+    a finished (or failed) analysis should stick around."""
+    job_dir = os.path.dirname(video_path)
+    with contextlib.suppress(OSError):
+        shutil.rmtree(job_dir)
 
 
 def start_worker():
