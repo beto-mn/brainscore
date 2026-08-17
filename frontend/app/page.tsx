@@ -147,7 +147,7 @@ export default function Home() {
       {state === "done" && result && (
         <section className="flex flex-col items-center gap-6">
           <ScoreGauge score={result.score} />
-          <ActivationChart timeline={result.activation_timeline} />
+          <ActivationChart timeline={result.activation_timeline} durationS={result.duration_s} />
           <StatsCards stats={result.stats} durationS={result.duration_s} />
           <button onClick={handleReset} className="text-sm text-slate-400 underline hover:text-slate-200">
             Analyze another video
