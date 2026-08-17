@@ -1,0 +1,8 @@
+# torch is intentionally NOT listed here: the pod image (RunPod PyTorch
+# 2.8.0, CUDA 12.8) already ships torch 2.8 preinstalled and built against
+# its CUDA. Reinstalling it from pip could break that build.
+numpy<2.1
+torchaudio==2.8.0
+fastapi
+uvicorn[standard]
+python-multipart
