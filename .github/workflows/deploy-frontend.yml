@@ -1,13 +1,13 @@
 name: Deploy Frontend (CI gate)
 
 # The actual production deploy is handled by Vercel's native GitHub
-# integration (Root Directory = frontend/, see README): every push to main
+# integration (Root Directory = frontend/, see README): every push to master
 # triggers a deploy automatically, no job needed here. This workflow only
 # runs lint + build as a CI gate to catch errors before Vercel attempts to
 # build.
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "frontend/**"
 

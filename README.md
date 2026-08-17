@@ -83,7 +83,7 @@ When pausing the pod, use **Stop** in the RunPod console — **never Terminate**
 
 ## 2. ⚙️ Setting up automatic backend deploys (GitHub Actions)
 
-`deploy-backend.yml` runs on every push to `main` that touches `backend/**`: it connects to the pod via SSH, runs `git pull`, reinstalls `requirements.txt` if it changed, and re-runs `start.sh`.
+`deploy-backend.yml` runs on every push to `master` that touches `backend/**`: it connects to the pod via SSH, runs `git pull`, reinstalls `requirements.txt` if it changed, and re-runs `start.sh`.
 
 ### 2.1 Getting the pod's SSH host and port
 
@@ -118,7 +118,7 @@ In **Settings → Secrets and variables → Actions** of the repo, create:
    - `NEXT_PUBLIC_API_URL` = `https://<your-pod>-8000.proxy.runpod.net`
 5. Deploy.
 
-With the native Vercel-GitHub integration connected, every push to `main` (or PR, as a preview) triggers a deploy automatically — this doesn't depend on `deploy-frontend.yml`, which only runs lint + build as a CI gate.
+With the native Vercel-GitHub integration connected, every push to `master` (or PR, as a preview) triggers a deploy automatically — this doesn't depend on `deploy-frontend.yml`, which only runs lint + build as a CI gate.
 
 > 🔁 If you recreate the RunPod pod, the proxy URL changes. Update `NEXT_PUBLIC_API_URL` in Vercel (Settings → Environment Variables) and redeploy for it to take effect — **never hardcode this URL in the code**.
 
