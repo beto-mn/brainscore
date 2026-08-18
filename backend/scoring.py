@@ -13,14 +13,19 @@ from "brain potential" to particular networks (salience, reward, DMN...).
 """
 import numpy as np
 
-# TRIBE v2 operates on fMRI-style timesteps sampled at the standard TR used
-# during training/fine-tuning; used only to estimate a human-readable duration.
+# Fallback ONLY, used when the real video duration couldn't be read (see
+# model.get_video_duration). This is an unverified guess at TRIBE v2's TR,
+# not a confirmed value from its docs - n_timesteps * TR_SECONDS can be
+# noticeably wrong since segments can be dropped/chunked, so the real file
+# duration is always preferred when available.
 TR_SECONDS = 1.49
 
 
-def compute_score(preds: np.ndarray) -> dict:
+def compute_score(preds: np.ndarray, duration_s: float | None = None) -> dict:
     """
     preds: array-like of shape (timesteps, n_vertices) with raw model predictions.
+    duration_s: real video duration in seconds (from model.get_video_duration).
+        Falls back to n_timesteps * TR_SECONDS (approximate) if not given.
 
     Returns a dict shaped as:
         {
@@ -53,7 +58,8 @@ def compute_score(preds: np.ndarray) -> dict:
     score = int(np.clip(round(_sigmoid_scale(raw_score) * 100), 0, 100))
 
     timeline = _downsample(per_timestep_mean, max_points=100)
-    duration_s = float(n_timesteps * TR_SECONDS)
+    if duration_s is None:
+        duration_s = float(n_timesteps * TR_SECONDS)
 
     return {
         "score": score,

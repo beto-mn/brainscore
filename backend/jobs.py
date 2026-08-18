@@ -56,7 +56,11 @@ def _worker_loop():
         try:
             _set_job(job_id, status=JobStatus.PROCESSING)
             preds = model_module.run_inference(video_path)
-            result = compute_score(preds)
+            try:
+                duration_s = model_module.get_video_duration(video_path)
+            except Exception:
+                duration_s = None  # compute_score falls back to the TR estimate
+            result = compute_score(preds, duration_s=duration_s)
             _set_job(job_id, status=JobStatus.DONE, result=result)
         except Exception as exc:
             _set_job(job_id, status=JobStatus.ERROR, error=str(exc))

@@ -9,6 +9,7 @@ fake predictions instead, so the frontend can be developed without a GPU
 pod running (see README "Correr todo en local").
 """
 import os
+import subprocess
 
 _MOCK = os.environ.get("MOCK_MODEL") == "1"
 
@@ -52,6 +53,32 @@ def run_inference(video_path: str):
     df = _model.get_events_dataframe(video_path=video_path)
     preds, _segments = _model.predict(events=df)
     return preds
+
+
+def get_video_duration(video_path: str) -> float:
+    """Real duration of the uploaded video file, in seconds, read via ffprobe.
+
+    TRIBE v2's n_timesteps does NOT reliably map back to the source video's
+    length: it can drop segments with no detected events and chunk long
+    videos, so estimating duration as n_timesteps * TR is inaccurate (a
+    96s video reported as 320s was traced back to exactly this). Reading
+    the file's real duration directly sidesteps that entirely. Raises if
+    ffprobe is missing or the file can't be parsed - callers should fall
+    back to the TR-based estimate in that case (see scoring.py).
+    """
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            video_path,
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return float(result.stdout.strip())
 
 
 def release_gpu_memory():

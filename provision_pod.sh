@@ -145,6 +145,17 @@ print("   punkt_tab OK")
 assert torch.cuda.is_available(), "CUDA no disponible!"
 print(f"   GPU: {torch.cuda.get_device_name(0)}")
 PY
+
+# ffprobe: el backend lo usa para leer la duración real del video subido
+# (backend/model.py get_video_duration) en vez de estimarla con un TR
+# adivinado. tribev2 ya lo necesita internamente para extraer audio de
+# video, así que normalmente ya viene en la imagen del pod.
+if command -v ffprobe >/dev/null 2>&1; then
+  ok "ffprobe disponible ($(ffprobe -version | head -n1))"
+else
+  echo -e "\033[1;31m ✗ ffprobe no encontrado — duration_s caerá al estimado por TR (impreciso). Instala ffmpeg.\033[0m"
+fi
+
 ok "Provisioning completo"
 
 # ----------------------------------------------------------------------------
